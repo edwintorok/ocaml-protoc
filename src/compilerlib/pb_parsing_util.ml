@@ -122,7 +122,9 @@ let rpc_option_map items =
   let s = items |> List.map (fun (k, v) -> k ^ ":" ^ v) |> String.concat "\n" in
   Pb_option.Constant_string s
 
-let service ~content service_name = Pt.{ service_name; service_body = content }
+let service ~content service_name =
+  incr message_counter;
+  Pt.{ service_id = !message_counter; service_name; service_body = content }
 
 let import ?public file_name =
   {

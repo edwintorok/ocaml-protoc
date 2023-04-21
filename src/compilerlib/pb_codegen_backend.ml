@@ -629,6 +629,8 @@ let compile ~unsigned_tag all_types = function
     compile_message ~unsigned_tag file_options all_types file_name scope m
   | { Tt.spec = Tt.Enum e; file_name; scope; file_options; _ } ->
     [ compile_enum file_options file_name scope e ]
+  | {Tt.spec = Tt.Service s; file_name; scope; file_options; _} ->
+    compile_service file_options all_types file_name scope s
 
 module Internal = struct
   let is_mutable = is_mutable

@@ -95,9 +95,25 @@ type enum = {
   enum_options: Pb_option.set;
 }
 
+type 'a rpc = {
+  rpc_name: string;
+  rpc_options: Pb_option.set;
+  rpc_req_stream: bool;
+  rpc_req: 'a Pb_field_type.t;
+  rpc_res_stream: bool;
+  rpc_res: 'a Pb_field_type.t;
+}
+
+type 'a service = {
+  service_name: string;
+  service_options: Pb_option.set;
+  service_rpcs: 'a rpc list
+}
+
 type 'a proto_type_spec =
   | Enum of enum
   | Message of 'a message
+  | Service of 'a service
 
 type 'a proto_type = {
   scope: type_scope;

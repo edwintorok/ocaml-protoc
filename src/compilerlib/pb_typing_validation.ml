@@ -241,8 +241,48 @@ let rec validate_message ?(parent_options = Pb_option.empty) file_name
   acc.Acc.all_types
   @ [ make_proto_type ~file_name ~file_options ~id ~scope:message_scope ~spec ]
 
+let compile_service file_name file_options scope parsed_service =
+  let id = parsed_service.Pt.service_id in
+  let service_options =
+    let open Pt in
+    parsed_service.service_body |> List.filter_map @@ function
+    | Service_option opt -> Some opt    
+    | Service_rpc _ -> None
+  in
+  let service_options =
+    service_options |> List.fold_left
+         (fun service_options (name, value) ->
+           Pb_option.add service_options name value)
+         Pb_option.empty
+  in
+
+  let compile_rpc rpc =
+    { Tt.rpc_name = rpc.Pt.rpc_name
+    ; Tt.rpc_options = rpc.Pt.rpc_options
+    ; Tt.rpc_req_stream = rpc.Pt.rpc_req_stream
+    ; Tt.rpc_req = rpc.Pt.rpc_req
+    ; Tt.rpc_res_stream = rpc.Pt.rpc_res_stream
+    ; Tt.rpc_res = rpc.Pt.rpc_res
+    }
+  in
+
+  let service_rpcs =
+    let open Pt in
+    List.rev_map compile_rpc (
+      parsed_service.service_body |> List.filter_map @@ function
+      | Service_option _ -> None
+      | Service_rpc rpc -> Some rpc
+    )
+  in
+  let spec = Tt.Service { Tt.service_name = parsed_service.Pt.service_name
+  ; service_options
+  ; service_rpcs
+  }
+  in
+  make_proto_type ~file_name ~file_options ~id ~scope ~spec
+   
 let validate proto =
-  let { Pt.package; Pt.proto_file_name; messages; enums; file_options; _ } =
+  let { Pt.package; Pt.proto_file_name; messages; enums; file_options; services; _ } =
     proto
   in
 
@@ -256,7 +296,14 @@ let validate proto =
       enums []
   in
 
-  List.fold_left
+  let pbtt_services = List.fold_left
     (fun pbtt_msgs pbpt_msg ->
       pbtt_msgs @ validate_message file_name file_options scope pbpt_msg)
     pbtt_msgs messages
+  in
+    
+  List.fold_left
+    (fun pbtt_services pbpt_service ->
+      compile_service file_name file_options scope pbpt_service :: pbtt_services)
+    pbtt_services services
+

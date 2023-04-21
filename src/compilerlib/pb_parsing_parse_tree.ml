@@ -136,6 +136,7 @@ type service_body_content =
   | Service_option of Pb_option.t
 
 type service = {
+  service_id: int;
   service_name: string;
   service_body: service_body_content list;
 }

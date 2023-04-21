@@ -34,6 +34,7 @@ module Types_by_scope = struct
     match spec with
     | Tt.Enum { Tt.enum_name; _ } -> enum_name
     | Tt.Message { Tt.message_name; _ } -> message_name
+    | Tt.Service { Tt.service_name; _ } -> service_name
 
   module String_map = Map.Make (struct
     type t = string
@@ -104,6 +105,9 @@ let type_path_of_type { Tt.scope; spec; _ } =
   | Tt.Message { Tt.message_name; _ } ->
     let { Tt.packages; message_names } = scope in
     packages @ message_names @ [ message_name ]
+  | Tt.Service { Tt.service_name; _ } ->
+    let { Tt.packages; message_names } = scope in
+    packages @ message_names @ [ service_name ]
 
 (* this function returns all the scope to search for a type starting 
  * by the most innner one first. 
@@ -203,6 +207,11 @@ let resolve_enum_field_default field_name type_ field_default =
     | Tt.Message _ ->
       let info =
         "field of type message cannot have a " ^ "default litteral value"
+      in
+      E.invalid_default_value ~field_name ~info ()
+    | Tt.Service _ ->
+      let info =
+        "field of type service cannot have a default literal value"
       in
       E.invalid_default_value ~field_name ~info ()
     | Tt.Enum { Tt.enum_values; _ } ->
@@ -329,6 +338,32 @@ let resolve_type t type_ =
       Tt.Message { Tt.extensions; message_options; message_name; message_body }
     in
     { Tt.scope; id; file_name; file_options; spec }
+
+  | Tt.Service svc ->
+    let open Tt in
+    let resolve_rpc rpc =
+      let resolve message =
+        let message_type, _ =
+          let field_name = rpc.rpc_name in
+          let service_type_path = type_path_of_type type_ in
+          let do_resolve () =
+            resolve_field_type_and_default t field_name message None
+              service_type_path
+          in
+          match do_resolve () with
+          | ret -> ret
+          | exception Not_found ->
+            E.unresolved_type ~field_name ~type_:"" ~message_name:svc.service_name ()
+        in
+        message_type
+      in
+      { rpc with rpc_req = resolve rpc.rpc_req; rpc_res = resolve rpc.rpc_res }
+    in
+    let spec =
+      Service { svc with service_rpcs = List.rev_map resolve_rpc  svc.service_rpcs }
+    in
+    { scope; id; file_name; file_options; spec }
+
 
 let resolve_types types =
   let t = List.fold_left Types_by_scope.add Types_by_scope.empty types in
