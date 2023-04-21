@@ -42,7 +42,7 @@ type user_defined_type = {
   udt_type_name: string;
   (* Need to keep track of this since encoding logic in binary
      format is quite different *)
-  udt_type: [ `Message | `Enum ];
+  udt_type: [ `Message | `Enum | `Service];
 }
 
 type basic_type =
@@ -139,10 +139,23 @@ and const_variant = {
   cv_constructors: const_variant_constructor list;
 }
 
+and fn = {
+  fn_name: string;
+  fn_options: Pb_option.set;
+  fn_request_type: field_type;
+  fn_response_type: field_type;
+}
+
+and structure = {
+  module_name: string;
+  functions: fn list
+}
+
 and type_spec =
   | Record of record
   | Variant of variant
   | Const_variant of const_variant
+  | Module of structure
 
 type type_ = {
   module_prefix: string;

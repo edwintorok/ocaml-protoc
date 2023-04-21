@@ -4,6 +4,8 @@ module F = Pb_codegen_formatting
 let sp = Pb_codegen_util.sp
 let file_suffix = Pb_codegen_decode_yojson.file_suffix
 
+let string_of_field_type = Pb_codegen_util.string_of_field_type
+
 let unsupported json_label =
   failwith (sp "Unsupported field type for field: %s" json_label)
 
@@ -218,6 +220,35 @@ let gen_const_variant ?and_ module_prefix { Ot.cv_name; Ot.cv_constructors } sc
           F.linep sc "| %s_types.%s -> `String \"%s\"" module_prefix cvc_name
             cvc_string_value)
         cv_constructors)
+  
+let monadp sc =
+    F.scope sc (fun sc ->
+       F.linep sc "type +'a io (** IO monad for RPC client *)";
+       F.linep sc "";
+       F.linep sc "val map: ('a -> 'b) -> 'a io -> 'b io";
+       F.linep sc "(** [map f t] transforms the result of [t] using [f]. *)";
+       F.linep sc "";
+       F.linep sc "val rpc: Yojson.Basic.json -> Yojson.Basic.json io";
+       F.linep sc "(** [rpc request] sends [request] to the remote server, and receives a reply *)";
+    )
+  
+let gen_module ?and_:_ module_prefix Ot.{module_name; functions; _} sc =
+    F.linep sc "module %s(C: sig" module_name;
+    monadp sc;
+    F.linep sc "end) = struct";
+    F.scope sc (fun sc ->
+      let open Ot in
+      F.linep sc "type +'a io = 'a C.io";
+      functions |> List.iter @@ fun fn ->
+      F.linep sc "let %s req =" fn.fn_name;
+      F.scope sc (fun sc ->
+        let enc = (string_of_field_type fn.fn_request_type) in
+        let dec = (string_of_field_type fn.fn_response_type) in
+        F.linep sc "req |> encode_%s |> C.rpc |> C.map decode_%s"
+          enc dec
+      )
+    );
+    F.linep sc "end"
 
 let gen_struct ?and_ t sc =
   let { Ot.spec; module_prefix; _ } = t in
@@ -232,6 +263,9 @@ let gen_struct ?and_ t sc =
       true
     | Ot.Const_variant v ->
       gen_const_variant ?and_ module_prefix v sc;
+      true
+    | Ot.Module m ->
+      gen_module ?and_ module_prefix m sc;
       true
   in
 
@@ -256,6 +290,17 @@ let gen_sig ?and_ t sc =
     true
   | { Ot.spec = Ot.Const_variant { Ot.cv_name; _ }; _ } ->
     f cv_name;
+    true
+  | { Ot.spec = Ot.Module { Ot.module_name; functions}; _} ->
+    F.linep sc "module %s(C: sig" module_name;
+    F.scope sc (fun sc ->
+       F.linep sc "type +'a io (** IO monad for RPC client *)";
+       F.linep sc "";
+       F.linep sc "val map: ('a -> 'b) -> 'a io -> 'b io";
+       F.linep sc "val rpc: Yojson.Basic.json -> Yojson.Basic.json io";
+       F.linep sc "(** [rpc request] sends [request] to the remote server, and receives a reply *)";
+    );
+    F.linep sc "end) : %s_types.%s with type 'a io = 'a C.io" module_prefix module_name;
     true
 
 let ocamldoc_title = "Protobuf YoJson Encoding"

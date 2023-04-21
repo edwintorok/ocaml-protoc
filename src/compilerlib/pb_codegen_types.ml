@@ -80,6 +80,20 @@ let gen_const_variant ?and_ { Ot.cv_name; cv_constructors } sc =
       List.iter
         (fun { Ot.cvc_name; _ } -> F.linep sc "| %s " cvc_name)
         cv_constructors)
+  
+let gen_module ?and_:_ { Ot.module_name; functions } sc =
+  F.linep sc "module type %s = sig" module_name;
+  F.scope sc (fun sc -> 
+    let open Ot in
+    F.linep sc "type +'a io";
+    functions |> List.iter @@ fun fn ->
+    F.linep sc "val %s: %s -> %s io"
+    fn.fn_name
+     (string_of_field_type fn.fn_request_type)
+     (string_of_field_type fn.fn_response_type)
+  );
+  F.linep sc "end"
+
 
 let print_ppx_extension { Ot.type_level_ppx_extension; _ } sc =
   match type_level_ppx_extension with
@@ -91,7 +105,9 @@ let gen_struct ?and_ t scope =
   (match spec with
   | Ot.Record r -> gen_record ?and_ r scope
   | Ot.Variant v -> gen_variant ?and_ v scope
-  | Ot.Const_variant v -> gen_const_variant ?and_ v scope);
+  | Ot.Const_variant v -> gen_const_variant ?and_ v scope
+  | Ot.Module m -> gen_module ?and_ m scope
+  );
   print_ppx_extension t scope;
   true
 
@@ -100,7 +116,9 @@ let gen_sig ?and_ t scope =
   (match spec with
   | Ot.Record r -> gen_record ?and_ r scope
   | Ot.Variant v -> gen_variant ?and_ v scope
-  | Ot.Const_variant v -> gen_const_variant ?and_ v scope);
+  | Ot.Const_variant v -> gen_const_variant ?and_ v scope
+  | Ot.Module m -> gen_module ?and_ m scope
+  );
   print_ppx_extension t scope;
   true
 

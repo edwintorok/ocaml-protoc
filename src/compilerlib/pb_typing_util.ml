@@ -62,6 +62,9 @@ let message_option { Tt.message_options; _ } option_name =
 let enum_option { Tt.enum_options; _ } option_name =
   Pb_option.get enum_options option_name
 
+let service_option { Tt.service_options; _ } option_name =
+  Pb_option.get service_options option_name
+
 let type_scope_of_type { Tt.scope; _ } = scope
 
 let is_empty_message = function
@@ -72,3 +75,4 @@ let is_empty_message = function
 let type_name_of_type = function
   | { Tt.spec = Tt.Enum { Tt.enum_name; _ }; _ } -> enum_name
   | { Tt.spec = Tt.Message { Tt.message_name; _ }; _ } -> message_name
+  | { Tt.spec = Tt.Service { Tt.service_name; _}; _} -> service_name

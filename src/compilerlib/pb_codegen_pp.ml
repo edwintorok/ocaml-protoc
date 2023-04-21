@@ -133,7 +133,9 @@ let gen_struct ?and_ t sc =
   (match spec with
   | Ot.Record r -> gen_record ?and_ module_prefix r sc
   | Ot.Variant v -> gen_variant ?and_ module_prefix v sc
-  | Ot.Const_variant v -> gen_const_variant ?and_ module_prefix v sc);
+  | Ot.Const_variant v -> gen_const_variant ?and_ module_prefix v sc
+  | Ot.Module _ -> (* TODO *) ()
+  );
   true
 
 let gen_sig ?and_ t sc =
@@ -148,7 +150,9 @@ let gen_sig ?and_ t sc =
   (match spec with
   | Ot.Record { Ot.r_name; _ } -> f r_name
   | Ot.Variant v -> f v.Ot.v_name
-  | Ot.Const_variant { Ot.cv_name; _ } -> f cv_name);
+  | Ot.Const_variant { Ot.cv_name; _ } -> f cv_name
+  | Ot.Module _ -> (* TODO *) ()
+  );
   true
 
 let ocamldoc_title = "Formatters"

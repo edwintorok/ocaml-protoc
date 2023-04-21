@@ -51,7 +51,9 @@ let decode_field_expression field_type pk =
     in
     (match t.Ot.udt_type with
     | `Message -> f_name ^ " (Pbrt.Decoder.nested d)"
-    | `Enum -> f_name ^ " d")
+    | `Enum -> f_name ^ " d"
+    | `Service -> f_name ^ " s"
+    )
   | Ot.Ft_unit -> "Pbrt.Decoder.empty_nested d"
   | Ot.Ft_basic_type bt -> runtime_function_for_basic_type bt pk ^ " d"
   | Ot.Ft_wrapper_type wt -> runtime_function_for_wrapper_type wt ^ " d"
@@ -340,6 +342,9 @@ let gen_struct ?and_ t sc =
     | Ot.Const_variant v ->
       gen_const_variant ?and_ module_prefix v sc;
       true
+    | Ot.Module _ ->
+      (* TODO *)
+      false
   in
 
   has_encoded
@@ -368,6 +373,9 @@ let gen_sig ?and_ t sc =
     | Ot.Const_variant { Ot.cv_name; _ } ->
       f cv_name;
       true
+    | Ot.Module _ ->
+      (* TODO *)
+      false
   in
 
   has_encoded

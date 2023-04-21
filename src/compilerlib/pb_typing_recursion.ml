@@ -26,13 +26,13 @@
 module Tt = Pb_typing_type_tree
 module Graph = Pb_typing_graph
 
+let list_of_field_type = function
+    | `User_defined x -> [ x ]
+    | #Pb_field_type.builtin_type -> []
+
 let node_of_proto_type = function
   | { Tt.id; Tt.spec = Tt.Enum _; _ } -> Graph.create_node id []
   | { Tt.id; Tt.spec = Tt.Message { Tt.message_body; _ }; _ } ->
-    let list_of_field_type = function
-      | `User_defined x -> [ x ]
-      | #Pb_field_type.builtin_type -> []
-    in
 
     (* TODO : this whole flatten thing is a bit hacky
      * we should develop a clearer solution *)
@@ -52,6 +52,17 @@ let node_of_proto_type = function
            message_body
     in
     Graph.create_node id sub
+
+  | { Tt.id; Tt.spec = Tt.Service { Tt.service_rpcs; _}; _} ->
+    let sub =
+      service_rpcs |> List.concat_map @@ fun rpc ->
+      List.concat
+       [ list_of_field_type rpc.Tt.rpc_req
+       ; list_of_field_type rpc.Tt.rpc_res
+       ]
+    in
+    Graph.create_node id sub
+
 
 let is_id input_id { Tt.id; _ } = input_id = id
 

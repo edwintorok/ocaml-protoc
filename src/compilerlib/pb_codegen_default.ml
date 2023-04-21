@@ -183,6 +183,9 @@ let gen_struct ?and_ t sc =
     | Ot.Const_variant v ->
       gen_const_variant v sc;
       true
+    | Ot.Module _ ->
+      (* TODO *)
+      false
   in
   has_encoded
 
@@ -228,6 +231,9 @@ let gen_sig ?and_ t sc =
     | Ot.Const_variant { Ot.cv_name; _ } ->
       f cv_name;
       true
+    | Ot.Module _ ->
+      (* TODO *)
+      false
   in
 
   has_encoded

@@ -64,6 +64,7 @@ val type_of_id : 'a Tt.proto -> int -> 'a Tt.proto_type
 val string_of_message : int -> Tt.type_scope -> 'a Tt.message -> string
 val message_option : 'a Tt.message -> string -> Pb_option.constant option
 val enum_option : Tt.enum -> string -> Pb_option.constant option
+val service_option: 'a Tt.service -> string -> Pb_option.constant option
 
 (** {2 Accessor for Tt.type} *)
 

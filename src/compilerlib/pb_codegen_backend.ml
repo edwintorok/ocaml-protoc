@@ -149,6 +149,7 @@ let user_defined_type_of_id all_types file_name i =
           match spec with
           | Tt.Enum _ -> `Enum
           | Tt.Message _ -> `Message
+          | Tt.Service _ -> `Service
         in
         let { Tt.message_names; _ } = Typing_util.type_scope_of_type t in
         let udt_type_name =
@@ -189,7 +190,9 @@ let encoding_info_of_field_type all_types field_type =
   | `User_defined id ->
     (match Typing_util.type_of_id all_types id with
     | { Tt.spec = Tt.Enum _; _ } -> Ot.Pk_varint false
-    | { Tt.spec = Tt.Message _; _ } -> Ot.Pk_bytes)
+    | { Tt.spec = Tt.Message _; _ } -> Ot.Pk_bytes
+    | { Tt.spec = Tt.Service _; _} -> assert false (* Service cannot be a parameter *)
+  )
 
 let encoding_of_field all_types (field : (Pb_field_type.resolved, 'a) Tt.field)
     =
@@ -624,13 +627,43 @@ let compile_enum file_options file_name scope enum =
       type_level_ppx_extension;
     }
 
+let compile_service ~unsigned_tag file_options all_types file_name scope service =
+  let module_prefix = module_prefix_of_file_name file_name in
+  let service_name = service.Tt.service_name in
+  let type_level_ppx_extension =
+    Typing_util.service_option service "ocaml_service_ppx"
+    |> string_of_string_option service_name
+    |> process_all_types_ppx_extension file_name file_options
+  in
+  let { Tt.message_names; Tt.packages = _ } = scope in
+  let compile_rpc rpc =
+    let fn_options = rpc.Tt.rpc_options in
+    let compile_type message_type =
+        compile_field_type ~unsigned_tag all_types file_options
+          fn_options file_name message_type
+    in
+    Ot.{ fn_name = label_name_of_field_name rpc.Tt.rpc_name
+       ; fn_options
+       ; fn_request_type = compile_type rpc.Tt.rpc_req
+       ; fn_response_type = compile_type rpc.Tt.rpc_res
+       }
+  in
+  Ot.{
+  module_prefix;
+  spec = Module {
+     module_name = constructor_name service_name;
+     functions = List.rev_map compile_rpc service.Tt.service_rpcs
+   };
+  type_level_ppx_extension;
+  }
+
 let compile ~unsigned_tag all_types = function
   | { Tt.spec = Tt.Message m; file_name; file_options; scope; _ } ->
     compile_message ~unsigned_tag file_options all_types file_name scope m
   | { Tt.spec = Tt.Enum e; file_name; scope; file_options; _ } ->
     [ compile_enum file_options file_name scope e ]
   | {Tt.spec = Tt.Service s; file_name; scope; file_options; _} ->
-    compile_service file_options all_types file_name scope s
+    [ compile_service ~unsigned_tag file_options all_types file_name scope s ]
 
 module Internal = struct
   let is_mutable = is_mutable

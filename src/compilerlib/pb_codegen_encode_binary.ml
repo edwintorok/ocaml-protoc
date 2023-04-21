@@ -68,7 +68,9 @@ let gen_encode_field_type ?with_key sc var_name encoding_number pk is_packed
     (match udt.Ot.udt_type with
     | `Message ->
       F.linep sc "Pbrt.Encoder.nested (%s %s) encoder;" f_name var_name
-    | `Enum -> F.linep sc "%s %s encoder;" f_name var_name)
+    | `Enum -> F.linep sc "%s %s encoder;" f_name var_name
+    | `Service -> (* TODO *) ()
+    )
   | Ot.Ft_unit ->
     encode_key sc;
     F.line sc "Pbrt.Encoder.empty_nested encoder;"
@@ -276,6 +278,9 @@ let gen_struct ?and_ t sc =
     | Ot.Const_variant v ->
       gen_const_variant ?and_ module_prefix v sc;
       true
+    | Ot.Module _ ->
+      (* TODO *)
+      false
   in
   has_encoded
 
@@ -300,6 +305,9 @@ let gen_sig ?and_ t sc =
     | Ot.Const_variant { Ot.cv_name; _ } ->
       f cv_name;
       true
+    | Ot.Module _ ->
+      (* TODO *)
+      false
   in
   has_encoded
 

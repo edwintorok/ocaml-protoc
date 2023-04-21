@@ -157,11 +157,21 @@ let collect_modules_of_record modules { Ot.r_fields; _ } =
     (fun modules { Ot.rf_field_type; _ } ->
       collect_modules_of_record_field_type modules rf_field_type)
     modules r_fields
+    
+let collect_modules_of_module modules { Ot.functions; _} =
+  List.fold_left
+    (fun modules Ot.{ fn_request_type; fn_response_type; _} ->
+      let modules = collect_modules_of_field_type modules fn_request_type
+      in
+      collect_modules_of_field_type modules fn_response_type
+    )
+  modules functions
 
 let collect_modules_of_type_spec modules = function
   | Ot.Record r -> collect_modules_of_record modules r
   | Ot.Variant v -> collect_modules_of_variant modules v
   | Ot.Const_variant _ -> modules
+  | Ot.Module m -> collect_modules_of_module modules m
 
 let collect_modules_of_types ocaml_types =
   List.fold_left
